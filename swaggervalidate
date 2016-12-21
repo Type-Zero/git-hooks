@@ -1,0 +1,29 @@
+#!/bin/bash
+set -e
+
+function run_test {
+  if $(git diff --name-status --cached | awk '{if ($1 !~ /R+/) print $2; else if ($1 ~ /R+/) print $3;}' | grep -q swagger.*json); then
+    echo "Validating Swagger Templates."
+    command -v curl >/dev/null 2>&1 || { echo >&2 "'curl' required to validate Swagger template changes, but not installed. Aborting."; exit 1; }
+    git diff --name-status --cached | \
+    awk '{if ($1 !~ /R+/ && $2 ~ /swagger\/.*\.json/) print $2; else if ($1 ~ /R+/ && $3 ~ /swagger\/.*\.json/) print $3;}' | \
+    xargs -n1 -I '{-}' \
+      bash -c 'RESULT=$(curl -s -X POST -d @''{-}'" -H 'Content-Type:application/json'"' http://online.swagger.io/validator/debug); \
+      if [ "$RESULT" != "{}" ]; \
+        then echo "{-} validation failed. Aborting. Result: ${RESULT}"; \
+        exit 1; \
+      fi'
+  fi
+}
+
+case "${1}" in
+  --about )
+    echo "Hook assumes that swagger files are named swagger*json"
+    ;;
+  --install )
+    echo "Installing hook"
+    ;;
+  * )
+    run_test
+    ;;
+esac
