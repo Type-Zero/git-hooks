@@ -2,10 +2,10 @@
 set -e
 
 function run_test {
-  if $(git diff --name-status --cached | awk '{if ($1 !~ /R+/) print $2; else if ($1 ~ /R+/) print $3;}' | grep -q cloudformation.*template); then
+  if $(git diff --name-status --cached | awk '{if ($1 !~ /R+/ && $1 !~ /D+/) print $2; else if ($1 ~ /R+/) print $3;}' | grep -q cloudformation.*template); then
     echo "Validating CloudFormation Templates."
     command -v aws >/dev/null 2>&1 || { echo >&2 "'aws' (AWSCLI) required to validate CloudFormation changes, but not installed. Aborting."; exit 1; }
-    git diff --name-status --cached | awk '{if ($1 !~ /R+/ && $2 ~ /cloudformation\/.*\.template/) print $2; else if ($1 ~ /R+/ && $3 ~ /cloudformation\/.*\.template/) print $3;}' | xargs -n1 -I '{}' aws cloudformation validate-template --template-body file://'{}' >/dev/null
+    git diff --name-status --cached | awk '{if ($1 !~ /R+/ && $1 !~ /D+/ && $2 ~ /cloudformation\/.*\.template/) print $2; else if ($1 ~ /R+/ && $3 ~ /cloudformation\/.*\.template/) print $3;}' | xargs -n1 -I '{}' aws cloudformation validate-template --template-body file://'{}' >/dev/null
   fi
 }
 
